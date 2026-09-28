@@ -139,7 +139,26 @@ print(f"Mes 1 Despesa Reconhecida: R$ {schedule[0].period_expense_recognized_brl
 print(f"Total Ações Vestidas: {sum(e.shares_vesting_in_month for e in schedule):,}")
 ```
 
-### 3. Generate Official CVM Sistema Empresas.NET XML
+### 3. Ingest Corporate Minutes (*Atas de AGO/AGE/RCA*) with Gemini Flash 3.8
+
+```python
+from relata.ingestion.extractor import AtaExtractor
+from relata.ingestion.mapper import map_ata_to_fre_submission
+from relata.engine.reconciler import reconcile_fre_section_8
+
+# Ingest and sanitize meeting minutes (LGPD zero-retention CPF tokenization)
+extractor = AtaExtractor()
+extracted_data = extractor.extract(ata_text)
+
+# Map into formal CVM FRE Section 8 container
+submission = map_ata_to_fre_submission(extracted_data, fiscal_year=2025)
+
+# Formally audit mathematical invariants before filing
+report = reconcile_fre_section_8(submission)
+assert report.is_valid is True
+```
+
+### 4. Generate Official CVM Sistema Empresas.NET XML
 
 ```python
 from relata.filing.empresas_net_xml import generate_cvm_empresas_net_xml
