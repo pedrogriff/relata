@@ -11,6 +11,7 @@
 [![Accounting: CPC 10 (R1) / IFRS 2](https://img.shields.io/badge/Accounting-CPC%2010%20(R1)%20%7C%20IFRS%202-purple.svg)](docs/references/211_CPC_10_R1_rev%2014.pdf)
 [![Privacy: Zero-Retention LGPD](https://img.shields.io/badge/Privacy-LGPD%20Art.%2018%20Zero--Retention-green.svg)](src/relata/security/privacy_vault.py)
 [![Filing: Sistema Empresas.NET](https://img.shields.io/badge/Filing-Sistema%20Empresas.NET%20XML-orange.svg)](src/relata/filing/empresas_net_xml.py)
+[![MCP Server](https://img.shields.io/badge/MCP-Protocol%202024--11--05-8A2BE2.svg)](src/relata/mcp/server.py)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 ---
@@ -167,6 +168,37 @@ from relata.filing.empresas_net_xml import generate_cvm_empresas_net_xml
 xml_filing = generate_cvm_empresas_net_xml(submission)
 with open("CVM_FRE_Secao8_2025.xml", "w", encoding="utf-8") as f:
     f.write(xml_filing)
+```
+
+---
+
+## 🔌 Model Context Protocol (MCP) Server
+
+Relata exposes its full deterministic regulatory and accounting engine over the standardized **Model Context Protocol (protocolVersion: 2024-11-05)**, enabling local coding agents in **Claude Desktop** and **Cursor** to execute CVM compliance audits and option pricing directly via JSON-RPC 2.0 stdio:
+
+### Registered MCP Tools
+
+| Tool Name | Scope & Purpose |
+| :--- | :--- |
+| `relata_calculate_cpc10_fair_value` | Continuous dividend Black-Scholes call valuation under CPC 10 Item 16 / IFRS 2. |
+| `relata_generate_cpc10_accruals` | Straight-line monthly P&L accrual schedule with forfeiture rate adjustment. |
+| `relata_distribute_shares` | Integer share conservation via Largest Remainder Method (`sum(s_i) == S`). |
+| `relata_reconcile_fre_section_8` | Deterministic invariant auditing for CVM FRE Section 8 tables and spread boundaries. |
+| `relata_ingest_corporate_minutes` | Ingestion of *Atas de AGO/AGE/RCA* with LGPD Art. 18 zero-retention CPF tokenization. |
+| `relata_generate_empresas_net_xml` | Direct export to validated CVM *Sistema Empresas.NET* XML schema. |
+
+### Configuration (`claude_desktop_config.json` or Cursor MCP)
+
+```json
+{
+  "mcpServers": {
+    "relata": {
+      "command": "python3",
+      "args": ["-m", "relata.mcp"],
+      "cwd": "/path/to/relata"
+    }
+  }
+}
 ```
 
 ---

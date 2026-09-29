@@ -39,12 +39,12 @@ class CPC10Grant(BaseModel):
     grant_date: date
     vesting_start_date: date
     vesting_months: Annotated[int, Field(gt=0, description="Prazo de aquisição de direitos (vesting period) em meses")]
-    lock_up_months: Annotated[int, Field(ge=0, default=0, description="Período de restrição pós-vesting")]
+    lock_up_months: Annotated[int, Field(ge=0, default=0, description="Período de restrição pós-vesting")] = 0
 
     total_shares_granted: Annotated[int, Field(gt=0, description="Número total de opções ou ações outorgadas")]
     pricing_parameters: OptionPricingParameters | None = None
     grant_date_fair_value_unit_brl: Annotated[Decimal, Field(ge=0, description="Valor justo unitário na data da outorga")]
-    annual_forfeiture_rate: Annotated[Decimal, Field(ge=0, lt=1, default=Decimal("0.0"), description="Taxa anual estimada de cancelamento/saída")]
+    annual_forfeiture_rate: Annotated[Decimal, Field(ge=0, lt=1, default=Decimal("0.0"), description="Taxa anual estimada de cancelamento/saída")] = Decimal("0.0")
 
     @model_validator(mode="after")
     def validate_pricing_consistency(self) -> CPC10Grant:

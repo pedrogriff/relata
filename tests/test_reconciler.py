@@ -16,9 +16,11 @@ def test_reconcile_sample_valid_submission(sample_valid_submission: FRESection8S
     report = reconcile_fre_section_8(sample_valid_submission)
     assert report.is_valid is True
     # Grand total should match sum of board + officers
-    board_total = sample_valid_submission.get_organ_breakdown(CorporateBody.CONSELHO_ADMINISTRACAO).grand_total_brl
-    officers_total = sample_valid_submission.get_organ_breakdown(CorporateBody.DIRETORIA_ESTATUTARIA).grand_total_brl
-    assert report.grand_total_brl == board_total + officers_total
+    board = sample_valid_submission.get_organ_breakdown(CorporateBody.CONSELHO_ADMINISTRACAO)
+    officers = sample_valid_submission.get_organ_breakdown(CorporateBody.DIRETORIA_ESTATUTARIA)
+    assert board is not None
+    assert officers is not None
+    assert report.grand_total_brl == board.grand_total_brl + officers.grand_total_brl
 
 
 def test_reconcile_flags_mismatched_remunerated_members(sample_valid_submission: FRESection8Submission) -> None:

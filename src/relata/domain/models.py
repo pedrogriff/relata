@@ -33,23 +33,23 @@ class OrganRemunerationBreakdown(BaseModel):
     remunerated_members: Annotated[int, Field(ge=0, description="Número de membros remunerados")]
 
     # Remuneração Fixa
-    pro_labore_or_salaries_brl: Annotated[Decimal, Field(ge=0, default=Decimal("0.0"))]
-    direct_benefits_brl: Annotated[Decimal, Field(ge=0, default=Decimal("0.0"))]
-    committee_participation_brl: Annotated[Decimal, Field(ge=0, default=Decimal("0.0"))]
-    other_fixed_brl: Annotated[Decimal, Field(ge=0, default=Decimal("0.0"))]
+    pro_labore_or_salaries_brl: Annotated[Decimal, Field(ge=0)] = Decimal("0.0")
+    direct_benefits_brl: Annotated[Decimal, Field(ge=0)] = Decimal("0.0")
+    committee_participation_brl: Annotated[Decimal, Field(ge=0)] = Decimal("0.0")
+    other_fixed_brl: Annotated[Decimal, Field(ge=0)] = Decimal("0.0")
 
     # Remuneração Variável
-    bonus_brl: Annotated[Decimal, Field(ge=0, default=Decimal("0.0"))]
-    profit_sharing_plr_brl: Annotated[Decimal, Field(ge=0, default=Decimal("0.0"))]
-    other_variable_brl: Annotated[Decimal, Field(ge=0, default=Decimal("0.0"))]
+    bonus_brl: Annotated[Decimal, Field(ge=0)] = Decimal("0.0")
+    profit_sharing_plr_brl: Annotated[Decimal, Field(ge=0)] = Decimal("0.0")
+    other_variable_brl: Annotated[Decimal, Field(ge=0)] = Decimal("0.0")
 
     # Remuneração Baseada em Ações (CPC 10)
-    share_based_equity_brl: Annotated[Decimal, Field(ge=0, default=Decimal("0.0"))]
-    share_based_cash_brl: Annotated[Decimal, Field(ge=0, default=Decimal("0.0"))]
+    share_based_equity_brl: Annotated[Decimal, Field(ge=0)] = Decimal("0.0")
+    share_based_cash_brl: Annotated[Decimal, Field(ge=0)] = Decimal("0.0")
 
     # Pós-Emprego e Rescisão
-    post_employment_benefits_brl: Annotated[Decimal, Field(ge=0, default=Decimal("0.0"))]
-    termination_severance_brl: Annotated[Decimal, Field(ge=0, default=Decimal("0.0"))]
+    post_employment_benefits_brl: Annotated[Decimal, Field(ge=0)] = Decimal("0.0")
+    termination_severance_brl: Annotated[Decimal, Field(ge=0)] = Decimal("0.0")
 
     @property
     def total_fixed_brl(self) -> Decimal:
