@@ -12,6 +12,7 @@
 [![Privacy: Zero-Retention LGPD](https://img.shields.io/badge/Privacy-LGPD%20Art.%2018%20Zero--Retention-green.svg)](src/relata/security/privacy_vault.py)
 [![Filing: Sistema Empresas.NET](https://img.shields.io/badge/Filing-Sistema%20Empresas.NET%20XML-orange.svg)](src/relata/filing/empresas_net_xml.py)
 [![MCP Server](https://img.shields.io/badge/MCP-Protocol%202024--11--05-8A2BE2.svg)](src/relata/mcp/server.py)
+[![Live Showcase](https://img.shields.io/badge/Live%20Showcase-playgriff.me%2Frelata-blue.svg?logo=googlechrome&logoColor=white)](https://www.playgriff.me/relata/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 ---
@@ -200,6 +201,29 @@ Relata exposes its full deterministic regulatory and accounting engine over the 
   }
 }
 ```
+
+---
+
+## 🌐 Interactive Live Showcase
+
+Experience Relata's full deterministic regulatory and accounting engine live in your web browser:
+* **Live Web App**: [https://www.playgriff.me/relata/](https://www.playgriff.me/relata/)
+* **Local Terminal Launcher**:
+  ```bash
+  # Launch local showcase workbench in your browser (port 8080)
+  python -m relata.showcase
+  # Or via installed console script
+  relata-showcase
+  ```
+
+### Live Capabilities Demonstrated
+
+1. **CPC 10 / IFRS 2 Valuator**: Continuous dividend Black-Scholes call valuation ($d_1, d_2, N(d_1), N(d_2)$) and monthly straight-line P&L accrual table with annual employee forfeiture decay.
+2. **CVM FRE Section 8 Reconciler**: Real-time statutory invariant auditing ($\text{Min} \le \text{Avg} \le \text{Max}$, $\text{Remunerated} \le \text{Total}$), with instant error injection simulation.
+3. **Share Distributor**: Exact integer share conservation ($\sum s_i \equiv S$) using the Largest Remainder Method (Hamilton-Hare) vs. naive rounding drift.
+4. **LGPD Privacy Vault**: Zero-retention surrogate tokenization of Brazilian corporate minutes (*Atas de AGO/AGE/RCA*) with simulated cryptographic shredding.
+5. **Sistema Empresas.NET XML**: Real-time generation, preview, and download of validated CVM XML filings.
+6. **MCP Live Console**: Interactive JSON-RPC 2.0 console for testing Relata tools locally.
 
 ---
 

@@ -31,6 +31,7 @@ dependencies = [
 
 [project.scripts]
 relata-mcp = "relata.mcp.stdio:main"
+relata-showcase = "relata.showcase:main"
 
 [project.optional-dependencies]
 dev = [
