@@ -11,16 +11,14 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from relata.domain.common import BilingualText as BilingualText
 from relata.domain.enums import CorporateBody
-
-
-class BilingualText(BaseModel):
-    """Bilingual statutory text container ensuring synchronized disclosures without translation drift."""
-
-    model_config = ConfigDict(frozen=True)
-
-    pt_br: Annotated[str, Field(min_length=1, description="Texto estatutário oficial em português (CVM)")]
-    en_us: Annotated[str, Field(min_length=1, description="Tradução oficial em inglês para investidores/ADRs")]
+from relata.domain.plan_models import (
+    OptionBalancesItem85,
+    ShareBasedPlan,
+    TerminationPackageItem87,
+    VariableCompensationPolicy,
+)
 
 
 class OrganRemunerationBreakdown(BaseModel):
@@ -138,7 +136,11 @@ class FRESection8Submission(BaseModel):
 
     item_8_1_policy_narrative: BilingualText
     item_8_2_organs: list[OrganRemunerationBreakdown]
+    item_8_3_variable_policies: list[VariableCompensationPolicy] = []
+    item_8_4_share_plans: list[ShareBasedPlan] = []
+    item_8_5_option_balances: list[OptionBalancesItem85] = []
     item_8_6_spreads: list[OrganIndividualSpread]
+    item_8_7_termination_packages: list[TerminationPackageItem87] = []
 
     @property
     def grand_total_compensation_brl(self) -> Decimal:
@@ -154,4 +156,22 @@ class FRESection8Submission(BaseModel):
         for spread in self.item_8_6_spreads:
             if spread.corporate_body == body:
                 return spread
+        return None
+
+    def get_option_balance(self, body: CorporateBody) -> OptionBalancesItem85 | None:
+        for balance in self.item_8_5_option_balances:
+            if balance.corporate_body == body:
+                return balance
+        return None
+
+    def get_variable_policy(self, body: CorporateBody) -> VariableCompensationPolicy | None:
+        for policy in self.item_8_3_variable_policies:
+            if policy.corporate_body == body:
+                return policy
+        return None
+
+    def get_termination_package(self, body: CorporateBody) -> TerminationPackageItem87 | None:
+        for pkg in self.item_8_7_termination_packages:
+            if pkg.corporate_body == body:
+                return pkg
         return None

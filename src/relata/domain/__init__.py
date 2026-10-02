@@ -6,8 +6,12 @@ from relata.domain.cpc10_models import CPC10Grant, MonthlyVestingAccrual, Option
 from relata.domain.enums import (
     CompensationComponent,
     CorporateBody,
+    OptionStatus,
+    PerformanceMetricCategory,
     SettlementMethod,
     SharePlanType,
+    StrikeAdjustmentIndex,
+    TerminationType,
     ValuationModel,
 )
 from relata.domain.models import (
@@ -15,6 +19,14 @@ from relata.domain.models import (
     FRESection8Submission,
     OrganIndividualSpread,
     OrganRemunerationBreakdown,
+)
+from relata.domain.plan_models import (
+    OptionBalancesItem85,
+    PerformanceMetric,
+    PlanTranche,
+    ShareBasedPlan,
+    TerminationPackageItem87,
+    VariableCompensationPolicy,
 )
 
 __all__ = [
@@ -24,10 +36,20 @@ __all__ = [
     "CorporateBody",
     "FRESection8Submission",
     "MonthlyVestingAccrual",
+    "OptionBalancesItem85",
     "OptionPricingParameters",
+    "OptionStatus",
     "OrganIndividualSpread",
     "OrganRemunerationBreakdown",
+    "PerformanceMetric",
+    "PerformanceMetricCategory",
+    "PlanTranche",
     "SettlementMethod",
+    "ShareBasedPlan",
     "SharePlanType",
+    "StrikeAdjustmentIndex",
+    "TerminationPackageItem87",
+    "TerminationType",
     "ValuationModel",
+    "VariableCompensationPolicy",
 ]

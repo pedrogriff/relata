@@ -187,6 +187,9 @@ Relata exposes its full deterministic regulatory and accounting engine over the 
 | `relata_reconcile_fre_section_8` | Deterministic invariant auditing for CVM FRE Section 8 tables and spread boundaries. |
 | `relata_ingest_corporate_minutes` | Ingestion of *Atas de AGO/AGE/RCA* with LGPD Art. 18 zero-retention CPF tokenization. |
 | `relata_generate_empresas_net_xml` | Direct export to validated CVM *Sistema Empresas.NET* XML schema. |
+| `relata_calculate_dilution_and_intrinsic_value` | Equity dilution percentage (Item 8.4) and in-the-money intrinsic value (Item 8.5). |
+| `relata_reconcile_ledger_trial_balance` | Reconciles ERP trial balance accounts (SAP / Totvs Balancete) against CVM Item 8.2 totals. |
+| `relata_audit_option_balances_item_8_5` | Statutory invariant audit for unvested/exercisable balances and recognized expense. |
 
 ### Configuration (`claude_desktop_config.json` or Cursor MCP)
 

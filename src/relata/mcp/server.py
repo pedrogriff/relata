@@ -12,11 +12,24 @@ from decimal import Decimal
 from typing import Any
 
 from relata.domain.cpc10_models import CPC10Grant, OptionPricingParameters
-from relata.domain.enums import CorporateBody, SettlementMethod, SharePlanType, ValuationModel
+from relata.domain.enums import (
+    CompensationComponent,
+    CorporateBody,
+    SettlementMethod,
+    SharePlanType,
+    ValuationModel,
+)
 from relata.domain.models import FRESection8Submission
+from relata.domain.plan_models import OptionBalancesItem85
 from relata.engine.cpc10_calculator import (
     calculate_black_scholes_call,
     generate_cpc10_accrual_schedule,
+)
+from relata.engine.ledger_reconciler import TrialBalanceAccount, reconcile_ledger_trial_balance
+from relata.engine.plan_engine import (
+    calculate_dilution,
+    calculate_intrinsic_value,
+    reconcile_item_8_5_balances,
 )
 from relata.engine.reconciler import reconcile_fre_section_8
 from relata.engine.share_distributor import distribute_integer_shares
@@ -142,6 +155,87 @@ class RelataMCPServer:
                     "required": ["submission"],
                 },
             ),
+            ToolDefinition(
+                name="relata_calculate_dilution_and_intrinsic_value",
+                description=(
+                    "Calculates potential share dilution percentage and in-the-money intrinsic value "
+                    "for stock option and restricted share plans under CVM Items 8.4 and 8.5."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "total_plan_shares": {"type": "integer", "description": "Total options or shares granted under plan"},
+                        "total_company_shares": {"type": "integer", "description": "Total common/preferred shares of the company"},
+                        "spot_price_brl": {"type": "number", "description": "Current B3 market spot price per share (BRL)"},
+                        "strike_price_brl": {"type": "number", "description": "Exercise strike price per share (BRL)"},
+                        "max_dilution_cap_pct": {"type": "number", "description": "Statutory dilution limit authorized by AGM (e.g. 5.0)"},
+                    },
+                    "required": ["total_plan_shares", "total_company_shares", "spot_price_brl", "strike_price_brl"],
+                },
+            ),
+            ToolDefinition(
+                name="relata_reconcile_ledger_trial_balance",
+                description=(
+                    "Reconciles ERP trial balance accounts (Balancete Contábil) against CVM FRE Section 8 "
+                    "Item 8.2 reported compensation totals and CPC 10 P&L expenses."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "trial_balance": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "account_code": {"type": "string"},
+                                    "account_name": {"type": "string"},
+                                    "balance_brl": {"type": "number"},
+                                    "component": {"type": "string"},
+                                },
+                                "required": ["account_code", "account_name", "balance_brl", "component"],
+                            },
+                            "description": "General ledger trial balance accounts from ERP (SAP, Totvs, Oracle)",
+                        },
+                        "submission": {"type": "object", "description": "Complete FRESection8Submission JSON dictionary"},
+                        "material_threshold_brl": {"type": "number", "default": 1.0, "description": "Materiality threshold in BRL"},
+                    },
+                    "required": ["trial_balance", "submission"],
+                },
+            ),
+            ToolDefinition(
+                name="relata_audit_option_balances_item_8_5",
+                description=(
+                    "Audits CVM Item 8.5 option balance invariants: unvested + exercisable + exercised + forfeited == total, "
+                    "current year expense <= cumulative expense, and intrinsic value consistency."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "corporate_body": {"type": "string", "description": "Corporate body (e.g. 'diretoria_estatutaria')"},
+                        "total_options_granted": {"type": "integer"},
+                        "unvested_options": {"type": "integer"},
+                        "exercisable_options": {"type": "integer"},
+                        "exercised_options": {"type": "integer", "default": 0},
+                        "forfeited_options": {"type": "integer", "default": 0},
+                        "weighted_avg_exercise_price_brl": {"type": "number"},
+                        "weighted_avg_unvested_strike_brl": {"type": "number"},
+                        "weighted_avg_exercisable_strike_brl": {"type": "number"},
+                        "intrinsic_value_exercisable_brl": {"type": "number", "default": 0.0},
+                        "current_year_recognized_expense_brl": {"type": "number", "default": 0.0},
+                        "cumulative_recognized_expense_brl": {"type": "number", "default": 0.0},
+                        "spot_price_brl": {"type": "number", "description": "Optional B3 spot price to verify intrinsic value"},
+                    },
+                    "required": [
+                        "corporate_body",
+                        "total_options_granted",
+                        "unvested_options",
+                        "exercisable_options",
+                        "weighted_avg_exercise_price_brl",
+                        "weighted_avg_unvested_strike_brl",
+                        "weighted_avg_exercisable_strike_brl",
+                    ],
+                },
+            ),
         ]
         return {t.name: t for t in tools}
 
@@ -245,6 +339,12 @@ class RelataMCPServer:
                 result = self._exec_ingest_minutes(arguments)
             elif tool_name == "relata_generate_empresas_net_xml":
                 result = self._exec_generate_xml(arguments)
+            elif tool_name == "relata_calculate_dilution_and_intrinsic_value":
+                result = self._exec_calculate_dilution_and_intrinsic_value(arguments)
+            elif tool_name == "relata_reconcile_ledger_trial_balance":
+                result = self._exec_reconcile_ledger_trial_balance(arguments)
+            elif tool_name == "relata_audit_option_balances_item_8_5":
+                result = self._exec_audit_option_balances_item_8_5(arguments)
             else:
                 return {
                     "jsonrpc": "2.0",
@@ -359,6 +459,97 @@ class RelataMCPServer:
             "status": "success",
             "xml_length_bytes": len(xml_str.encode("utf-8")),
             "xml_content": xml_str,
+        }
+
+    def _exec_calculate_dilution_and_intrinsic_value(self, args: dict[str, Any]) -> dict[str, Any]:
+        total_plan_shares = int(args["total_plan_shares"])
+        total_company_shares = int(args["total_company_shares"])
+        spot_price_brl = Decimal(str(args["spot_price_brl"]))
+        strike_price_brl = Decimal(str(args["strike_price_brl"]))
+        max_dilution_cap = Decimal(str(args["max_dilution_cap_pct"])) if "max_dilution_cap_pct" in args else None
+
+        dilution_pct = calculate_dilution(total_plan_shares, total_company_shares)
+        intrinsic_total = calculate_intrinsic_value(spot_price_brl, strike_price_brl, total_plan_shares)
+        unit_spread = max(Decimal("0.0"), spot_price_brl - strike_price_brl)
+
+        is_compliant = None
+        if max_dilution_cap is not None:
+            is_compliant = dilution_pct <= max_dilution_cap
+
+        return {
+            "status": "success",
+            "total_plan_shares": total_plan_shares,
+            "total_company_shares": total_company_shares,
+            "dilution_percentage": float(dilution_pct),
+            "max_dilution_cap_pct": float(max_dilution_cap) if max_dilution_cap is not None else None,
+            "dilution_compliant": is_compliant,
+            "spot_price_brl": float(spot_price_brl),
+            "strike_price_brl": float(strike_price_brl),
+            "unit_intrinsic_spread_brl": float(unit_spread),
+            "total_intrinsic_value_brl": float(intrinsic_total),
+            "in_the_money": spot_price_brl > strike_price_brl,
+        }
+
+    def _exec_reconcile_ledger_trial_balance(self, args: dict[str, Any]) -> dict[str, Any]:
+        tb_data = args["trial_balance"]
+        submission_data = args["submission"]
+        threshold = Decimal(str(args.get("material_threshold_brl", 1.0)))
+
+        tb_entries = [
+            TrialBalanceAccount(
+                account_code=entry["account_code"],
+                account_name=entry["account_name"],
+                balance_brl=Decimal(str(entry["balance_brl"])),
+                component=CompensationComponent(entry["component"]),
+            )
+            for entry in tb_data
+        ]
+        submission = FRESection8Submission.model_validate(submission_data)
+        report = reconcile_ledger_trial_balance(tb_entries, submission, material_threshold_brl=threshold)
+
+        return {
+            "status": "success",
+            "fiscal_year": report.fiscal_year,
+            "is_reconciled": report.is_reconciled,
+            "total_ledger_expense_brl": float(report.total_ledger_expense_brl),
+            "total_fre_reported_brl": float(report.total_fre_reported_brl),
+            "net_discrepancy_brl": float(report.net_discrepancy_brl),
+            "findings": [
+                {
+                    "component": f.component.value,
+                    "ledger_amount_brl": float(f.ledger_amount_brl),
+                    "fre_reported_brl": float(f.fre_reported_brl),
+                    "discrepancy_brl": float(f.discrepancy_brl),
+                    "is_material": f.is_material,
+                }
+                for f in report.findings
+            ],
+        }
+
+    def _exec_audit_option_balances_item_8_5(self, args: dict[str, Any]) -> dict[str, Any]:
+        spot_price = Decimal(str(args["spot_price_brl"])) if "spot_price_brl" in args else None
+        balance = OptionBalancesItem85(
+            corporate_body=CorporateBody(args["corporate_body"]),
+            total_options_granted=int(args["total_options_granted"]),
+            unvested_options=int(args["unvested_options"]),
+            exercisable_options=int(args["exercisable_options"]),
+            exercised_options=int(args.get("exercised_options", 0)),
+            forfeited_options=int(args.get("forfeited_options", 0)),
+            weighted_avg_exercise_price_brl=Decimal(str(args["weighted_avg_exercise_price_brl"])),
+            weighted_avg_unvested_strike_brl=Decimal(str(args["weighted_avg_unvested_strike_brl"])),
+            weighted_avg_exercisable_strike_brl=Decimal(str(args["weighted_avg_exercisable_strike_brl"])),
+            intrinsic_value_exercisable_brl=Decimal(str(args.get("intrinsic_value_exercisable_brl", 0.0))),
+            current_year_recognized_expense_brl=Decimal(str(args.get("current_year_recognized_expense_brl", 0.0))),
+            cumulative_recognized_expense_brl=Decimal(str(args.get("cumulative_recognized_expense_brl", 0.0))),
+        )
+        findings = reconcile_item_8_5_balances(balance, spot_price_brl=spot_price)
+
+        return {
+            "status": "success",
+            "is_valid": len(findings) == 0,
+            "corporate_body": balance.corporate_body.value,
+            "active_options": balance.active_options,
+            "findings": findings,
         }
 
     def _handle_resource_read(self, msg_id: Any, params: dict[str, Any]) -> dict[str, Any]:

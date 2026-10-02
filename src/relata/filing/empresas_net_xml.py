@@ -1,6 +1,7 @@
 """CVM Sistema Empresas.NET XML Schema Generator for Formulário de Referência (FRE).
 
-Produces official statutory XML document formatted for upload into CVM's electronic filing system.
+Produces official statutory XML document formatted for upload into CVM's electronic filing system,
+supporting Section 8 Items 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, and 8.7.
 """
 
 from __future__ import annotations
@@ -73,6 +74,100 @@ def generate_cvm_empresas_net_xml(submission: FRESection8Submission) -> str:
         # Grand Total
         ET.SubElement(node, "TotalGeralOrgao").text = f"{organ.grand_total_brl:.2f}"
 
+    # Item 8.3 - Estrutura de Remuneração Variável
+    if submission.item_8_3_variable_policies:
+        item83 = ET.SubElement(sec8, "Item8_3_EstruturaRemuneracaoVariavel")
+        for policy in submission.item_8_3_variable_policies:
+            pol_node = ET.SubElement(
+                item83,
+                "PoliticaVariavel",
+                attrib={
+                    "Orgao": policy.corporate_body.value,
+                    "PossuiClawback": "true" if policy.has_clawback else "false",
+                    "PossuiMalus": "true" if policy.has_malus else "false",
+                    "MesesDiferimento": str(policy.deferral_period_months),
+                },
+            )
+            ET.SubElement(pol_node, "DescricaoPolitica_PT").text = policy.narrative.pt_br
+            ET.SubElement(pol_node, "DescricaoPolitica_EN").text = policy.narrative.en_us
+            if policy.clawback_description:
+                ET.SubElement(pol_node, "TermosClawback_PT").text = policy.clawback_description.pt_br
+                ET.SubElement(pol_node, "TermosClawback_EN").text = policy.clawback_description.en_us
+
+            metrics_node = ET.SubElement(pol_node, "MetricasDesempenho")
+            for metric in policy.metrics:
+                ET.SubElement(
+                    metrics_node,
+                    "Metrica",
+                    attrib={
+                        "Nome_PT": metric.name.pt_br,
+                        "Nome_EN": metric.name.en_us,
+                        "Categoria": metric.category.value,
+                        "PesoPercentual": f"{metric.weight_pct:.2f}",
+                        "GatilhoMinimo": f"{metric.threshold_pct:.2f}",
+                        "MetaTarget": f"{metric.target_pct:.2f}",
+                        "TetoMaximo": f"{metric.max_cap_pct:.2f}",
+                    },
+                )
+
+    # Item 8.4 - Planos de Opção e Ações
+    if submission.item_8_4_share_plans:
+        item84 = ET.SubElement(sec8, "Item8_4_PlanosRemuneracaoBaseadaAcoes")
+        for plan in submission.item_8_4_share_plans:
+            plan_node = ET.SubElement(
+                item84,
+                "PlanoAcoes",
+                attrib={
+                    "IdPlano": plan.plan_id,
+                    "TipoPlano": plan.plan_type.value,
+                    "DataAprovacaoAGO": plan.agm_approval_date.isoformat(),
+                    "LimiteDiluicaoMax": f"{plan.max_dilution_percentage:.4f}",
+                    "TotalAcoesOutorgadas": str(plan.total_shares_granted),
+                    "PMPE_PrecoMedio": f"{plan.weighted_average_strike_price_brl:.4f}",
+                },
+            )
+            ET.SubElement(plan_node, "NomePlano_PT").text = plan.plan_name.pt_br
+            ET.SubElement(plan_node, "NomePlano_EN").text = plan.plan_name.en_us
+
+            tranches_node = ET.SubElement(plan_node, "SeriesOutorgas")
+            for tranche in plan.tranches:
+                ET.SubElement(
+                    tranches_node,
+                    "Tranche",
+                    attrib={
+                        "IdTranche": tranche.tranche_id,
+                        "DataOutorga": tranche.grant_date.isoformat(),
+                        "AcoesOutorgadas": str(tranche.shares_granted),
+                        "MesesCarencia": str(tranche.vesting_months),
+                        "PrecoExercicio": f"{tranche.exercise_strike_brl:.4f}",
+                        "IndiceCorrecao": tranche.strike_adjustment_index.value,
+                        "ValorJustoCPC10": f"{tranche.cpc10_grant_fair_value_brl:.4f}",
+                    },
+                )
+
+    # Item 8.5 - Saldos de Opções Reconhecidas
+    if submission.item_8_5_option_balances:
+        item85 = ET.SubElement(sec8, "Item8_5_SaldosOpcoesReconhecidas")
+        for bal in submission.item_8_5_option_balances:
+            ET.SubElement(
+                item85,
+                "QuadroSaldos",
+                attrib={
+                    "Orgao": bal.corporate_body.value,
+                    "TotalOutorgado": str(bal.total_options_granted),
+                    "OpcoesAVencer": str(bal.unvested_options),
+                    "OpcoesExerciveis": str(bal.exercisable_options),
+                    "OpcoesExercidas": str(bal.exercised_options),
+                    "OpcoesCanceladas": str(bal.forfeited_options),
+                    "PMPE_Total": f"{bal.weighted_avg_exercise_price_brl:.4f}",
+                    "PMPE_AVencer": f"{bal.weighted_avg_unvested_strike_brl:.4f}",
+                    "PMPE_Exerciveis": f"{bal.weighted_avg_exercisable_strike_brl:.4f}",
+                    "ValorIntrinsecoExerciveis": f"{bal.intrinsic_value_exercisable_brl:.2f}",
+                    "DespesaReconhecidaExercicio": f"{bal.current_year_recognized_expense_brl:.2f}",
+                    "DespesaReconhecidaAcumulada": f"{bal.cumulative_recognized_expense_brl:.2f}",
+                },
+            )
+
     # Item 8.6 - Remuneracao Min, Max e Media
     item86 = ET.SubElement(sec8, "Item8_6_RemuneracaoIndividual")
     for spread in submission.item_8_6_spreads:
@@ -87,6 +182,27 @@ def generate_cvm_empresas_net_xml(submission: FRESection8Submission) -> str:
                 "Media": f"{spread.average_individual_compensation_brl:.2f}",
             },
         )
+
+    # Item 8.7 - Rescisão e Pós-Emprego
+    if submission.item_8_7_termination_packages:
+        item87 = ET.SubElement(sec8, "Item8_7_RescisaoBeneficiosPosEmprego")
+        for pkg in submission.item_8_7_termination_packages:
+            pkg_node = ET.SubElement(
+                item87,
+                "TermosRescisao",
+                attrib={
+                    "Orgao": pkg.corporate_body.value,
+                    "PossuiGoldenParachute": "true" if pkg.has_golden_parachute else "false",
+                    "MesesAvisoPrevio": str(pkg.notice_period_months),
+                    "MesesNaoConcorrencia": str(pkg.non_compete_duration_months),
+                    "IndenizacaoMensalNaoConcorrencia": f"{pkg.non_compete_monthly_indemnity_brl:.2f}",
+                },
+            )
+            ET.SubElement(pkg_node, "PoliticaIndenizacao_PT").text = pkg.statutory_severance_terms.pt_br
+            ET.SubElement(pkg_node, "PoliticaIndenizacao_EN").text = pkg.statutory_severance_terms.en_us
+            if pkg.golden_parachute_terms:
+                ET.SubElement(pkg_node, "TermosGoldenParachute_PT").text = pkg.golden_parachute_terms.pt_br
+                ET.SubElement(pkg_node, "TermosGoldenParachute_EN").text = pkg.golden_parachute_terms.en_us
 
     # Pretty print XML
     raw_xml = ET.tostring(root, encoding="utf-8")

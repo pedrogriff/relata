@@ -100,3 +100,42 @@ class ValuationModel(StrEnum):
     BINOMIAL_LATTICE = "binomial_lattice"
     MONTE_CARLO = "monte_carlo"
     GRANT_DATE_MARKET_PRICE = "grant_date_market_price"
+
+
+class PerformanceMetricCategory(StrEnum):
+    """Categories of performance metrics for variable compensation under CVM Item 8.3."""
+
+    FINANCIAL = "financial"          # TSR, ROIC, EBITDA, Lucro Líquido, FCF
+    OPERATIONAL = "operational"      # Eficiência, Churn, NPS, SLAs
+    ESG_SUSTAINABILITY = "esg"       # Descarbonização, Diversidade, Saúde e Segurança
+    STRATEGIC = "strategic"          # M&A, Inovação, Transformação Digital
+
+
+class StrikeAdjustmentIndex(StrEnum):
+    """Monetary index used for strike price adjustments in Brazilian share plans (Item 8.4)."""
+
+    FIXED = "fixed"                  # Preço fixo nominal sem correção
+    IPCA = "ipca"                    # Índice Nacional de Preços ao Consumidor Amplo (IBGE)
+    IGPM = "igpm"                    # Índice Geral de Preços do Mercado (FGV)
+    CDI = "cdi"                      # Taxa de Depósito Interfinanceiro (B3)
+    TR = "tr"                        # Taxa Referencial
+
+
+class OptionStatus(StrEnum):
+    """Status lifecycle of options and restricted share awards under CVM Item 8.5."""
+
+    UNVESTED = "unvested"            # A Vencer (em período de carência/vesting)
+    EXERCISABLE = "exercisable"      # Exercíveis (já adquiridas / vested mas não exercidas)
+    EXERCISED = "exercised"          # Exercidas no exercício social
+    FORFEITED = "forfeited"          # Canceladas por desligamento ou expiração
+
+
+class TerminationType(StrEnum):
+    """Termination conditions and severance classifications under CVM Item 8.7."""
+
+    DISMISSAL_WITHOUT_CAUSE = "dismissal_without_cause"  # Rescisão sem justa causa (CLT Art. 477)
+    DISMISSAL_WITH_CAUSE = "dismissal_with_cause"        # Rescisão com justa causa (CLT Art. 482)
+    RESIGNATION = "resignation"                          # Renúncia / Pedido de demissão
+    RETIREMENT = "retirement"                            # Aposentadoria estatutária
+    CHANGE_OF_CONTROL = "change_of_control"              # Cláusula de mudança de controle (Golden Parachute)
+
